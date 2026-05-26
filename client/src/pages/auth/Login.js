@@ -46,6 +46,12 @@ const Login = () => {
         <Input.Password prefix={<LockOutlined />} placeholder="Password" />
       </Form.Item>
 
+      <div style={{ textAlign: 'right', marginBottom: 16 }}>
+        <Button type="link" onClick={() => navigate('/forgot-password')} style={{ padding: 0 }}>
+          Forgot Password?
+        </Button>
+      </div>
+
       <Form.Item>
         <Button type="primary" htmlType="submit" loading={loading} block>
           Login

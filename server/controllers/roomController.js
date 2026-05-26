@@ -11,11 +11,11 @@ const createRoom = async (req, res) => {
       });
     }
 
-    const room_code = is_private ? Math.random().toString(36).substring(2, 8).toUpperCase() : null;
+    const room_code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     const [result] = await pool.query(
       'INSERT INTO study_rooms (name, description, creator_id, is_private, room_code, max_members) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, description || null, req.userId, is_private || false, room_code, max_members || 50]
+      [name, description || null, req.userId, is_private || false, is_private ? room_code : null, max_members || 50]
     );
 
     await pool.query(
@@ -27,6 +27,7 @@ const createRoom = async (req, res) => {
       'SELECT * FROM study_rooms WHERE id = ?',
       [result.insertId]
     );
+    rooms[0].room_code = room_code;
 
     res.status(201).json({
       success: true,

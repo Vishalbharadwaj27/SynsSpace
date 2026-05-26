@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Button, Input, Modal, Form, message, Tag, Space } from 'antd';
-import { PlusOutlined, SearchOutlined, TeamOutlined, LockOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Button, Input, Modal, Form, message, Tag, Space, Typography } from 'antd';
+import { PlusOutlined, SearchOutlined, TeamOutlined, LockOutlined, CopyOutlined } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getRooms, createRoom, joinRoom } from '../redux/slices/roomSlice';
 
 const { Search } = Input;
 const { TextArea } = Input;
+const { Text, Title } = Typography;
 
 const Rooms = () => {
   const dispatch = useDispatch();
@@ -14,6 +15,8 @@ const Rooms = () => {
   const { rooms } = useSelector((state) => state.rooms);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [createdRoom, setCreatedRoom] = useState(null);
   const [form] = Form.useForm();
   const [joinForm] = Form.useForm();
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,13 +27,21 @@ const Rooms = () => {
 
   const handleCreateRoom = async (values) => {
     try {
-      await dispatch(createRoom(values)).unwrap();
-      message.success('Room created successfully');
+      const room = await dispatch(createRoom(values)).unwrap();
+      setCreatedRoom(room);
       setIsCreateModalOpen(false);
       form.resetFields();
+      setIsCodeModalOpen(true);
       dispatch(getRooms());
     } catch (error) {
       message.error(error);
+    }
+  };
+
+  const copyRoomCode = () => {
+    if (createdRoom?.room_code) {
+      navigator.clipboard.writeText(createdRoom.room_code);
+      message.success('Room code copied!');
     }
   };
 
@@ -155,6 +166,51 @@ const Rooms = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Room Created!"
+        open={isCodeModalOpen}
+        onCancel={() => setIsCodeModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsCodeModalOpen(false)}>
+            Close
+          </Button>,
+          <Button key="view" type="primary" onClick={() => {
+            setIsCodeModalOpen(false);
+            navigate(`/rooms/${createdRoom?.id}`);
+          }}>
+            Go to Room
+          </Button>,
+        ]}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <Title level={4}>Share this code with friends</Title>
+          <div
+            style={{
+              fontSize: 32,
+              fontWeight: 'bold',
+              letterSpacing: 8,
+              padding: '16px 24px',
+              background: '#f0f5ff',
+              borderRadius: 8,
+              margin: '16px 0',
+              cursor: 'pointer',
+              userSelect: 'all',
+            }}
+            onClick={copyRoomCode}
+          >
+            {createdRoom?.room_code}
+          </div>
+          <Button icon={<CopyOutlined />} onClick={copyRoomCode}>
+            Copy Code
+          </Button>
+          <div style={{ marginTop: 16, color: '#999' }}>
+            {createdRoom?.is_private
+              ? 'This room is private. Members need this code to join.'
+              : 'This room is public, but you can still share this code for quick access.'}
+          </div>
+        </div>
       </Modal>
     </div>
   );

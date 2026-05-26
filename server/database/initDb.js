@@ -35,6 +35,18 @@ async function initializeDatabase() {
 
     console.log('Executing database schema SQL...');
     await connection.query(schemaSql);
+
+    try {
+      await connection.query('ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) DEFAULT NULL');
+    } catch (e) {
+      // Column may already exist
+    }
+    try {
+      await connection.query('ALTER TABLE users ADD COLUMN reset_token_expires DATETIME DEFAULT NULL');
+    } catch (e) {
+      // Column may already exist
+    }
+
     console.log('Database and tables created successfully!');
     
   } catch (error) {

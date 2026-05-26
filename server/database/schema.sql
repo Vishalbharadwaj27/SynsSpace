@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
     study_interests TEXT,
     role ENUM('student', 'admin') DEFAULT 'student',
     total_study_hours DECIMAL(10, 2) DEFAULT 0.00,
+    reset_token VARCHAR(64) DEFAULT NULL,
+    reset_token_expires DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email)
