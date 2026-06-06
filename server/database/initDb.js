@@ -33,6 +33,23 @@ async function initializeDatabase() {
     console.log('Reading schema.sql...');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 
+    console.log('Dropping all existing tables...');
+    await connection.query('USE syncspace');
+    const [tables] = await connection.query(
+      "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'syncspace'"
+    );
+    if (tables.length > 0) {
+      await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+      for (const table of tables) {
+        await connection.query(`DROP TABLE IF EXISTS \`${table.TABLE_NAME}\``);
+        console.log(`  Dropped table: ${table.TABLE_NAME}`);
+      }
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+      console.log('All existing tables dropped.');
+    } else {
+      console.log('No existing tables to drop.');
+    }
+
     console.log('Executing database schema SQL...');
     await connection.query(schemaSql);
 

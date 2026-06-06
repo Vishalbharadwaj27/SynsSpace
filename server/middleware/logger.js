@@ -1,5 +1,5 @@
-const morgan = require('morgan');
-
-const logger = morgan('combined');
+const logger = (req, res, next) => {
+  next();
+};
 
 module.exports = logger;

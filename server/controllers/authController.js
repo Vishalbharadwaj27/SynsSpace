@@ -187,25 +187,9 @@ const forgotPassword = async (req, res) => {
 
     const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
 
-    if (users.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'If that email is registered, a reset link has been sent'
-      });
-    }
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000);
-
-    await pool.query(
-      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?',
-      [resetToken, resetExpires, email]
-    );
-
     res.status(200).json({
       success: true,
-      message: 'If that email is registered, a reset link has been sent',
-      data: { resetToken }
+      data: { exists: users.length > 0 }
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -216,14 +200,14 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-const resetPassword = async (req, res) => {
+const directResetPassword = async (req, res) => {
   try {
-    const { token, new_password } = req.body;
+    const { email, new_password, confirm_password } = req.body;
 
-    if (!token || !new_password) {
+    if (!email || !new_password || !confirm_password) {
       return res.status(400).json({
         success: false,
-        message: 'Token and new password are required'
+        message: 'Email, new password, and confirm password are required'
       });
     }
 
@@ -234,31 +218,34 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    const [users] = await pool.query(
-      'SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
-      [token]
-    );
-
-    if (users.length === 0) {
+    if (new_password !== confirm_password) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired reset token'
+        message: 'Passwords do not match'
+      });
+    }
+
+    const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Email not found'
       });
     }
 
     const hashedPassword = await bcrypt.hash(new_password, 10);
 
     await pool.query(
-      'UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+      'UPDATE users SET password = ? WHERE id = ?',
       [hashedPassword, users[0].id]
     );
 
     res.status(200).json({
       success: true,
-      message: 'Password reset successful'
+      message: 'Password reset successful. You can now login with your new password.'
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Direct reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Error resetting password'
@@ -272,5 +259,5 @@ module.exports = {
   getMe,
   updateProfile,
   forgotPassword,
-  resetPassword
+  directResetPassword
 };

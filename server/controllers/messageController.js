@@ -25,6 +25,9 @@ const sendMessage = async (req, res) => {
       [result.insertId]
     );
 
+    const io = req.app.get('io');
+    io.to(roomId).emit('receive_message', messages[0]);
+
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',

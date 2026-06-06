@@ -37,6 +37,18 @@ export const createRoom = createAsyncThunk(
   }
 );
 
+export const joinRoomById = createAsyncThunk(
+  'rooms/joinRoomById',
+  async ({ roomId, room_code }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`/rooms/${roomId}/join`, { room_code });
+      return response.data.data.room;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to join room');
+    }
+  }
+);
+
 export const joinRoom = createAsyncThunk(
   'rooms/joinRoom',
   async (roomCode, { rejectWithValue }) => {
@@ -45,6 +57,18 @@ export const joinRoom = createAsyncThunk(
       return response.data.data.room;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to join room');
+    }
+  }
+);
+
+export const leaveRoom = createAsyncThunk(
+  'rooms/leaveRoom',
+  async (roomId, { rejectWithValue }) => {
+    try {
+      await api.delete(`/rooms/${roomId}`);
+      return roomId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to leave room');
     }
   }
 );
@@ -109,6 +133,11 @@ const roomSlice = createSlice({
       .addCase(getRoomById.fulfilled, (state, action) => {
         state.currentRoom = action.payload.room;
         state.currentMembers = action.payload.members;
+      })
+      .addCase(leaveRoom.fulfilled, (state, action) => {
+        state.userRooms = state.userRooms.filter(r => r.id !== action.payload);
+        state.currentRoom = null;
+        state.currentMembers = [];
       });
   },
 });
