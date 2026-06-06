@@ -37,7 +37,10 @@ const messageSlice = createSlice({
       state.error = null;
     },
     addMessage: (state, action) => {
-      state.messages.push(action.payload);
+      const exists = state.messages.some(m => m.id === action.payload.id);
+      if (!exists) {
+        state.messages.push(action.payload);
+      }
     },
     setMessages: (state, action) => {
       state.messages = action.payload;
@@ -58,7 +61,10 @@ const messageSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
-        state.messages.push(action.payload);
+        const exists = state.messages.some(m => m.id === action.payload.id);
+        if (!exists) {
+          state.messages.push(action.payload);
+        }
       });
   },
 });
