@@ -46,18 +46,18 @@ export const forgotPassword = createAsyncThunk(
   async (email, { rejectWithValue }) => {
     try {
       const response = await api.post('/auth/forgot-password', { email });
-      return response.data.data;
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to process request');
     }
   }
 );
 
-export const resetPassword = createAsyncThunk(
-  'auth/resetPassword',
-  async ({ token, new_password }, { rejectWithValue }) => {
+export const directResetPassword = createAsyncThunk(
+  'auth/directResetPassword',
+  async ({ email, new_password, confirm_password }, { rejectWithValue }) => {
     try {
-      const response = await api.patch('/auth/reset-password', { token, new_password });
+      const response = await api.post('/auth/direct-reset', { email, new_password, confirm_password });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to reset password');
