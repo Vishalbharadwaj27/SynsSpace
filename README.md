@@ -1,6 +1,6 @@
 # SyncSpace - Realtime Collaboration Platform for Students
 
-A production-grade full-stack realtime collaboration platform where students can create study rooms, collaborate in real-time, chat, manage tasks, share notes, upload files, and use pomodoro timers to track productivity.
+A full-stack realtime collaboration platform where students can create study rooms, collaborate in real-time, chat, manage tasks, share notes, upload files, and use pomodoro timers to track productivity.
 
 ## Tech Stack
 
@@ -25,14 +25,14 @@ A production-grade full-stack realtime collaboration platform where students can
 
 ## Features
 
-- **Authentication**: JWT-based secure authentication with register/login
-- **Study Rooms**: Create public/private rooms, join via code, manage members
-- **Realtime Chat**: Socket.IO powered messaging with typing indicators
+- **Authentication**: JWT-based register/login with forgot/reset password flow
+- **Study Rooms**: Create public/private rooms, browse/search rooms, join via code or room card, manage members, leave rooms
+- **Realtime Chat**: Socket.IO powered messaging with typing indicators and automatic reconnection
 - **Task Management**: Kanban-style task board with status tracking
 - **Shared Notes**: Rich text notes with autosave
 - **File Sharing**: Upload and download files in rooms
-- **Pomodoro Timer**: Shared study timer with session tracking
-- **Notifications**: Real-time notifications for room invites, tasks, mentions
+- **Pomodoro Timer**: Shared study timer with session tracking and user stats
+- **Notifications**: Real-time notifications for room activity and tasks
 - **User Profiles**: Customizable profiles with productivity stats
 - **Dashboard**: Overview of study hours, active tasks, and room activity
 
@@ -40,23 +40,23 @@ A production-grade full-stack realtime collaboration platform where students can
 
 ```
 SyncSpace/
-├── server/                 # Backend
-│   ├── app.js             # Main server file
-│   ├── package.json       # Backend dependencies
-│   ├── .env.example       # Environment variables template
-│   ├── config/            # Configuration files
-│   │   ├── database.js    # MySQL connection
-│   │   └── jwt.js         # JWT configuration
-│   ├── controllers/       # Route controllers
-│   │   ├── authController.js
-│   │   ├── roomController.js
-│   │   ├── messageController.js
-│   │   ├── taskController.js
-│   │   ├── noteController.js
-│   │   ├── fileController.js
-│   │   ├── notificationController.js
-│   │   └── pomodoroController.js
-│   ├── routes/            # API routes
+├── server/                      # Backend
+│   ├── app.js                  # Main server file (Express + Socket.IO setup)
+│   ├── package.json            # Backend dependencies
+│   ├── .env.example            # Environment variables template
+│   ├── config/
+│   │   ├── database.js         # MySQL connection pool
+│   │   └── jwt.js              # JWT configuration
+│   ├── controllers/
+│   │   ├── authController.js   # Register, login, profile, forgot/reset password
+│   │   ├── roomController.js   # CRUD rooms, join by code, join by ID
+│   │   ├── messageController.js# Send & fetch messages with socket broadcast
+│   │   ├── taskController.js   # CRUD tasks
+│   │   ├── noteController.js   # CRUD rich-text notes
+│   │   ├── fileController.js   # Upload & manage files
+│   │   ├── notificationController.js  # Notification CRUD
+│   │   └── pomodoroController.js      # Pomodoro sessions & stats
+│   ├── routes/
 │   │   ├── auth.js
 │   │   ├── rooms.js
 │   │   ├── messages.js
@@ -65,39 +65,40 @@ SyncSpace/
 │   │   ├── files.js
 │   │   ├── notifications.js
 │   │   └── pomodoro.js
-│   ├── middleware/        # Express middleware
-│   │   ├── auth.js
-│   │   ├── errorHandler.js
-│   │   ├── logger.js
-│   │   └── validateRoomAccess.js
-│   ├── sockets/           # Socket.IO handlers
-│   │   └── socket.js
-│   ├── database/          # Database schema
-│   │   └── schema.sql
-│   └── uploads/           # File upload directory
-└── client/                # Frontend
-    ├── package.json       # Frontend dependencies
-    ├── .env.example       # Environment variables template
+│   ├── middleware/
+│   │   ├── auth.js             # JWT verification middleware
+│   │   ├── errorHandler.js     # Global error handler
+│   │   ├── logger.js           # Request logger (no-op by default)
+│   │   └── validateRoomAccess.js  # Room membership check
+│   ├── sockets/
+│   │   └── socket.js           # Socket.IO event handlers
+│   ├── database/
+│   │   ├── schema.sql          # Database schema
+│   │   └── initDb.js           # Database initializer (drops & recreates tables)
+│   └── uploads/                # File upload directory
+└── client/                     # Frontend
+    ├── package.json            # Frontend dependencies
+    ├── .env.example            # Environment variables template
     ├── public/
     │   └── index.html
     └── src/
-        ├── index.js       # React entry point
-        ├── App.js         # Main app component
-        ├── api/           # API utilities
-        ├── components/    # Reusable components
-        ├── layouts/       # Layout components
-        │   ├── MainLayout.js
-        │   └── AuthLayout.js
-        ├── pages/         # Page components
+        ├── index.js            # React entry point
+        ├── App.js              # Main app component (routing + socket init)
+        ├── pages/
         │   ├── auth/
         │   │   ├── Login.js
-        │   │   └── Register.js
+        │   │   ├── Register.js
+        │   │   ├── ForgotPassword.js
+        │   │   └── ResetPassword.js
         │   ├── Dashboard.js
         │   ├── Rooms.js
         │   ├── RoomDetail.js
         │   └── Profile.js
-        ├── redux/         # Redux store
-        │   ├── store.js
+        ├── layouts/
+        │   ├── MainLayout.js   # Authenticated layout with sidebar
+        │   └── AuthLayout.js   # Public layout for auth pages
+        ├── redux/
+        │   ├── store.js        # Redux store configuration
         │   └── slices/
         │       ├── authSlice.js
         │       ├── roomSlice.js
@@ -106,13 +107,12 @@ SyncSpace/
         │       ├── noteSlice.js
         │       ├── notificationSlice.js
         │       └── pomodoroSlice.js
-        ├── routes/        # React Router
-        │   └── ProtectedRoute.js
-        ├── sockets/       # Socket.IO client
-        ├── utils/         # Utility functions
-        │   ├── api.js
-        │   └── socket.js
-        └── styles/        # CSS files
+        ├── routes/
+        │   └── ProtectedRoute.js  # Auth guard component
+        ├── utils/
+        │   ├── api.js          # Axios instance with 401 interceptor
+        │   └── socket.js       # Socket.IO client singleton
+        └── styles/
             └── index.css
 ```
 
@@ -255,6 +255,15 @@ npm install -g serve
 serve -s build -l 3000
 ```
 
+### Database Reset
+
+To drop all tables and reinitialize the database:
+
+```bash
+cd server
+node database/initDb.js
+```
+
 ## API Endpoints
 
 ### Authentication
@@ -263,20 +272,23 @@ serve -s build -l 3000
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/me` - Get current user
 - `PUT /api/auth/profile` - Update user profile
+- `POST /api/auth/forgot-password` - Request password reset email
+- `POST /api/auth/reset-password` - Reset password with token
 
 ### Rooms
 
-- `GET /api/rooms` - Get all public rooms
+- `GET /api/rooms` - Get all public rooms (supports `?search=` query)
 - `POST /api/rooms` - Create a new room
-- `GET /api/rooms/my-rooms` - Get user's rooms
-- `POST /api/rooms/join` - Join a room with code
+- `GET /api/rooms/my-rooms` - Get user's joined rooms
+- `POST /api/rooms/join` - Join a room by 6-character code
+- `POST /api/rooms/:roomId/join` - Join a room by ID (requires `room_code` body for private rooms)
 - `GET /api/rooms/:roomId` - Get room details
-- `DELETE /api/rooms/:roomId` - Leave a room
+- `DELETE /api/rooms/:roomId` - Leave a room (transfers ownership if needed)
 
 ### Messages
 
-- `GET /api/messages/:roomId` - Get room messages
-- `POST /api/messages/:roomId` - Send a message
+- `GET /api/messages/:roomId` - Get room messages (paginated)
+- `POST /api/messages/:roomId` - Send a message (broadcasts via Socket.IO)
 
 ### Tasks
 
@@ -316,8 +328,8 @@ serve -s build -l 3000
 
 ### Client → Server
 
-- `join_room` - Join a room
-- `leave_room` - Leave a room
+- `join_room` - Join a room socket room
+- `leave_room` - Leave a room socket room
 - `send_message` - Send a message
 - `typing` - User is typing
 - `stop_typing` - User stopped typing
