@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Button, Input, Modal, Form, message, Tag, Space, Typography } from 'antd';
+import { Row, Col, Card, Button, Input, Modal, Form, message, Tag, Space, Typography, Checkbox } from 'antd';
 import { PlusOutlined, SearchOutlined, TeamOutlined, LockOutlined, CopyOutlined } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { getRooms, createRoom, joinRoom } from '../redux/slices/roomSlice';
+import { getRooms, createRoom, joinRoom, joinRoomById } from '../redux/slices/roomSlice';
 
 const { Search } = Input;
 const { TextArea } = Input;
-const { Text, Title } = Typography;
+const { Title } = Typography;
 
 const Rooms = () => {
   const dispatch = useDispatch();
@@ -16,9 +16,12 @@ const Rooms = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [isPrivateCodeModalOpen, setIsPrivateCodeModalOpen] = useState(false);
+  const [pendingPrivateRoom, setPendingPrivateRoom] = useState(null);
   const [createdRoom, setCreatedRoom] = useState(null);
   const [form] = Form.useForm();
   const [joinForm] = Form.useForm();
+  const [privateCodeForm] = Form.useForm();
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -52,6 +55,38 @@ const Rooms = () => {
       setIsJoinModalOpen(false);
       joinForm.resetFields();
       navigate(`/rooms/${room.id}`);
+    } catch (error) {
+      message.error(error);
+    }
+  };
+
+  const handleViewRoom = async (room) => {
+    if (room.is_private) {
+      setPendingPrivateRoom(room);
+      privateCodeForm.resetFields();
+      setIsPrivateCodeModalOpen(true);
+      return;
+    }
+    try {
+      await dispatch(joinRoomById({ roomId: room.id })).unwrap();
+      navigate(`/rooms/${room.id}`);
+    } catch (error) {
+      if (error === 'Already a member of this room') {
+        navigate(`/rooms/${room.id}`);
+      } else {
+        message.error(error);
+      }
+    }
+  };
+
+  const handlePrivateRoomJoin = async (values) => {
+    if (!pendingPrivateRoom) return;
+    try {
+      await dispatch(joinRoomById({ roomId: pendingPrivateRoom.id, room_code: values.room_code })).unwrap();
+      setIsPrivateCodeModalOpen(false);
+      setPendingPrivateRoom(null);
+      privateCodeForm.resetFields();
+      navigate(`/rooms/${pendingPrivateRoom.id}`);
     } catch (error) {
       message.error(error);
     }
@@ -98,8 +133,8 @@ const Rooms = () => {
               }
               extra={<Tag color="blue">{room.member_count} members</Tag>}
               actions={[
-                <Button type="primary" onClick={() => navigate(`/rooms/${room.id}`)}>
-                  View Room
+                <Button type="primary" onClick={() => handleViewRoom(room)}>
+                  {room.is_private ? 'Join Room' : 'View Room'}
                 </Button>,
               ]}
             >
@@ -133,7 +168,7 @@ const Rooms = () => {
             <TextArea rows={3} placeholder="Enter room description" />
           </Form.Item>
           <Form.Item name="is_private" valuePropName="checked">
-            <input type="checkbox" /> Private Room (requires code to join)
+            <Checkbox>Private Room (requires code to join)</Checkbox>
           </Form.Item>
           <Form.Item name="max_members" label="Max Members">
             <Input type="number" placeholder="50" defaultValue={50} />
@@ -159,6 +194,29 @@ const Rooms = () => {
             rules={[{ required: true, message: 'Please enter room code' }]}
           >
             <Input placeholder="Enter 6-digit room code" style={{ textTransform: 'uppercase' }} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block>
+              Join Room
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`Join "${pendingPrivateRoom?.name || ''}"`}
+        open={isPrivateCodeModalOpen}
+        onCancel={() => { setIsPrivateCodeModalOpen(false); setPendingPrivateRoom(null); }}
+        footer={null}
+      >
+        <p style={{ color: '#666', marginBottom: 16 }}>This room is private. Enter the room code to join.</p>
+        <Form form={privateCodeForm} onFinish={handlePrivateRoomJoin} layout="vertical">
+          <Form.Item
+            name="room_code"
+            label="Room Code"
+            rules={[{ required: true, message: 'Please enter the room code' }]}
+          >
+            <Input placeholder="Enter room code" style={{ textTransform: 'uppercase' }} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
