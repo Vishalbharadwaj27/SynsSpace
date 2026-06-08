@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS files (
     file_path VARCHAR(500) NOT NULL,
     file_size BIGINT,
     file_type VARCHAR(100),
+    sharing_permission ENUM('view', 'download') DEFAULT 'view',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (room_id) REFERENCES study_rooms(id) ON DELETE CASCADE,
     FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE,

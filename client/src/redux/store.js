@@ -6,6 +6,7 @@ import taskReducer from './slices/taskSlice';
 import noteReducer from './slices/noteSlice';
 import notificationReducer from './slices/notificationSlice';
 import pomodoroReducer from './slices/pomodoroSlice';
+import fileReducer from './slices/fileSlice';
 
 const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ const store = configureStore({
     notes: noteReducer,
     notifications: notificationReducer,
     pomodoro: pomodoroReducer,
+    files: fileReducer,
   },
 });
 

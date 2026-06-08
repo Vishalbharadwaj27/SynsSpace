@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tabs, Input, Button, List, Avatar, Tag, message, Row, Col, Card, Modal, Form, Select, DatePicker, Drawer, Dropdown, Space, Popconfirm, Typography } from 'antd';
-import { SendOutlined, UserOutlined, FileTextOutlined, CopyOutlined, MoreOutlined, DeleteOutlined, CodeOutlined, PlusOutlined, PlayCircleOutlined, PauseCircleOutlined, StopOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Tabs, Input, Button, List, Avatar, Tag, message, Row, Col, Card, Modal, Form, Select, DatePicker, Drawer, Dropdown, Space, Popconfirm, Typography, Radio } from 'antd';
+import { SendOutlined, UserOutlined, FileTextOutlined, CopyOutlined, MoreOutlined, DeleteOutlined, CodeOutlined, PlusOutlined, PlayCircleOutlined, PauseCircleOutlined, StopOutlined, LogoutOutlined, FilePdfOutlined, FileWordOutlined, FileOutlined, DownloadOutlined, EyeOutlined, LockOutlined, UnlockOutlined, UploadOutlined } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { getRoomById, leaveRoom } from '../redux/slices/roomSlice';
 import { getMessages, sendMessage } from '../redux/slices/messageSlice';
 import { getTasks, createTask, updateTask, deleteTask } from '../redux/slices/taskSlice';
 import { getNotes, createNote, updateNote, deleteNote } from '../redux/slices/noteSlice';
 import { startSession, endSession, getSessions } from '../redux/slices/pomodoroSlice';
+import { getFiles, uploadFile, updateFilePermission, deleteFile } from '../redux/slices/fileSlice';
 import socket from '../utils/socket';
+import api from '../utils/api';
 import dayjs from 'dayjs';
 import { useCreateBlockNote, BlockNoteViewRaw } from '@blocknote/react';
 import '@blocknote/react/style.css';
@@ -45,6 +47,7 @@ const RoomDetail = () => {
   const { tasks } = useSelector((state) => state.tasks);
   const { notes } = useSelector((state) => state.notes);
   const { sessions } = useSelector((state) => state.pomodoro);
+  const { files } = useSelector((state) => state.files);
   const [messageInput, setMessageInput] = useState('');
   const [activeTab, setActiveTab] = useState('chat');
   const messagesEndRef = useRef(null);
@@ -73,12 +76,20 @@ const RoomDetail = () => {
   const [noteKey, setNoteKey] = useState(0);
   const noteEditorRef = useRef(null);
 
+  const [uploading, setUploading] = useState(false);
+  const [uploadPermission, setUploadPermission] = useState('view');
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
     dispatch(getRoomById(roomId));
     dispatch(getMessages(roomId));
     dispatch(getTasks({ roomId }));
     dispatch(getNotes(roomId));
     dispatch(getSessions(roomId));
+    dispatch(getFiles(roomId));
 
     if (!socket.connected) {
       socket.connect();
@@ -263,6 +274,89 @@ const RoomDetail = () => {
     } catch (error) { message.error(error); }
   };
 
+  const handleUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      message.error('File size exceeds 8MB limit');
+      return;
+    }
+
+    const isPdf = file.type === 'application/pdf';
+    const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx');
+    if (!isPdf && !isDocx) {
+      message.error('Only PDF and DOCX files are allowed');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('sharing_permission', uploadPermission);
+
+    setUploading(true);
+    try {
+      await dispatch(uploadFile({ roomId, formData })).unwrap();
+      message.success('File uploaded successfully');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      message.error(error || 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownloadFile = async (file) => {
+    try {
+      const response = await api.get(`/files/download/${file.id}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', file.file_name);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      message.success('File download started');
+    } catch (error) {
+      message.error('Failed to download file: Permission denied or file not found');
+    }
+  };
+
+  const handleViewFile = async (file) => {
+    try {
+      const response = await api.get(`/files/view/${file.id}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: file.file_type });
+      const url = window.URL.createObjectURL(blob);
+      setPreviewFile(file);
+      setPreviewUrl(url);
+      setIsPreviewOpen(true);
+    } catch (error) {
+      message.error('Failed to load file preview');
+    }
+  };
+
+  const handleTogglePermission = async (file, newPermission) => {
+    try {
+      await dispatch(updateFilePermission({ fileId: file.id, sharing_permission: newPermission })).unwrap();
+      message.success('File permission updated');
+    } catch (error) {
+      message.error(error || 'Failed to update permission');
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      await dispatch(deleteFile(fileId)).unwrap();
+      message.success('File deleted successfully');
+    } catch (error) {
+      message.error(error || 'Failed to delete file');
+    }
+  };
+
   return (
     <div>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -388,7 +482,126 @@ const RoomDetail = () => {
         </TabPane>
 
         <TabPane tab="Files" key="files">
-          <div style={{ textAlign: 'center', padding: 40 }}><p style={{ color: '#666' }}>File sharing feature coming soon</p></div>
+          <Card 
+            title="Shared Files" 
+            extra={
+              <Space size="middle" align="center" style={{ flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 13, color: '#666' }}>Upload Permission for Next File:</Text>
+                <Radio.Group 
+                  value={uploadPermission} 
+                  onChange={(e) => setUploadPermission(e.target.value)}
+                  size="small"
+                  buttonStyle="solid"
+                >
+                  <Radio.Button value="view"><LockOutlined /> View Only</Radio.Button>
+                  <Radio.Button value="download"><UnlockOutlined /> Downloadable</Radio.Button>
+                </Radio.Group>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleUploadFile} 
+                  style={{ display: 'none' }} 
+                  accept=".pdf,.docx" 
+                />
+                <Button 
+                  type="primary" 
+                  icon={<UploadOutlined />} 
+                  loading={uploading} 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Upload File (.pdf, .docx, max 8MB)
+                </Button>
+              </Space>
+            }
+          >
+            <List
+              loading={uploading}
+              itemLayout="horizontal"
+              dataSource={files}
+              renderItem={(file) => {
+                const isPdf = file.file_type && file.file_type.includes('pdf');
+                const isDocx = file.file_type && (file.file_type.includes('word') || file.file_type.includes('officedocument') || file.file_name.endsWith('.docx'));
+                const fileIcon = isPdf ? (
+                  <FilePdfOutlined style={{ fontSize: 32, color: '#ff4d4f' }} />
+                ) : isDocx ? (
+                  <FileWordOutlined style={{ fontSize: 32, color: '#1890ff' }} />
+                ) : (
+                  <FileOutlined style={{ fontSize: 32, color: '#8c8c8c' }} />
+                );
+
+                const sizeMB = (file.file_size / (1024 * 1024)).toFixed(2);
+                const isUploader = file.uploaded_by === user?.id;
+                const isRoomOwnerOrAdmin = currentMembers?.some(m => m.user_id === user?.id && (m.role === 'owner' || m.role === 'admin'));
+                const canManageFile = isUploader || isRoomOwnerOrAdmin;
+                const canDownload = file.sharing_permission === 'download' || canManageFile;
+
+                return (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        type="text" 
+                        icon={<EyeOutlined />} 
+                        onClick={() => handleViewFile(file)}
+                      >
+                        View
+                      </Button>,
+                      <Button 
+                        type="text" 
+                        icon={<DownloadOutlined />} 
+                        disabled={!canDownload}
+                        onClick={() => handleDownloadFile(file)}
+                      >
+                        Download
+                      </Button>,
+                      canManageFile ? (
+                        <Select
+                          value={file.sharing_permission}
+                          onChange={(val) => handleTogglePermission(file, val)}
+                          size="small"
+                          style={{ width: 120 }}
+                        >
+                          <Option value="view">View Only</Option>
+                          <Option value="download">Downloadable</Option>
+                        </Select>
+                      ) : (
+                        file.sharing_permission === 'view' ? (
+                          <Tag color="orange" icon={<LockOutlined />}>View Only</Tag>
+                        ) : (
+                          <Tag color="green" icon={<UnlockOutlined />}>Downloadable</Tag>
+                        )
+                      ),
+                      canManageFile && (
+                        <Popconfirm
+                          title="Delete this file?"
+                          onConfirm={() => handleDeleteFile(file.id)}
+                          okText="Delete"
+                          cancelText="Cancel"
+                        >
+                          <Button type="text" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                      )
+                    ].filter(Boolean)}
+                  >
+                    <List.Item.Meta
+                      avatar={fileIcon}
+                      title={
+                        <Space>
+                          <span style={{ fontWeight: 600 }}>{file.file_name}</span>
+                          <span style={{ color: '#bfbfbf', fontSize: 12 }}>({sizeMB} MB)</span>
+                        </Space>
+                      }
+                      description={
+                        <Space size="middle" style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                          <span>Shared by: {file.uploader_name}</span>
+                          <span>Uploaded: {new Date(file.created_at).toLocaleDateString()} at {new Date(file.created_at).toLocaleTimeString()}</span>
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
+            />
+          </Card>
         </TabPane>
 
         <TabPane tab="Pomodoro" key="pomodoro">
@@ -476,6 +689,60 @@ const RoomDetail = () => {
         <Button key="save" type="primary" onClick={handleSaveNote}>Save</Button>,
       ]}>
         {editingNote && <NoteBlockEditor key={noteKey} ref={noteEditorRef} content={editingNote.content} title={noteTitle} onTitleChange={setNoteTitle} />}
+      </Modal>
+
+      {/* File Preview Modal */}
+      <Modal
+        title={`File Preview: ${previewFile ? previewFile.file_name : ''}`}
+        open={isPreviewOpen}
+        onCancel={() => {
+          setIsPreviewOpen(false);
+          if (previewUrl) {
+            window.URL.revokeObjectURL(previewUrl);
+          }
+          setPreviewUrl(null);
+          setPreviewFile(null);
+        }}
+        width={1000}
+        footer={[
+          <Button key="close" onClick={() => {
+            setIsPreviewOpen(false);
+            if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+            setPreviewFile(null);
+          }}>
+            Close
+          </Button>
+        ]}
+      >
+        {previewFile && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 600 }}>
+            {previewFile.file_type && previewFile.file_type.includes('pdf') ? (
+              <iframe
+                src={previewUrl}
+                title={previewFile.file_name}
+                style={{ width: '100%', height: '700px', border: 'none', borderRadius: 8 }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: 80, background: '#f5f5f5', borderRadius: 8, width: '100%' }}>
+                <FileWordOutlined style={{ fontSize: 80, color: '#1890ff', marginBottom: 20 }} />
+                <h3>DOCX Preview Supported</h3>
+                <p style={{ color: '#666', maxWidth: 450, margin: '0 auto 20px auto' }}>
+                  This DOCX document ({previewFile.file_name}) is shared as <strong>{previewFile.sharing_permission === 'view' ? 'View Only' : 'Downloadable'}</strong>.
+                </p>
+                {previewFile.sharing_permission === 'view' ? (
+                  <Tag color="orange" icon={<LockOutlined />} style={{ padding: '8px 16px', fontSize: 14 }}>
+                    Downloading is restricted. View permission granted.
+                  </Tag>
+                ) : (
+                  <Button type="primary" icon={<DownloadOutlined />} onClick={() => handleDownloadFile(previewFile)}>
+                    Download Document
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -30,7 +30,7 @@ A full-stack realtime collaboration platform where students can create study roo
 - **Realtime Chat**: Socket.IO powered messaging with typing indicators and automatic reconnection
 - **Task Management**: Kanban-style task board with status tracking
 - **Shared Notes**: Rich text notes with autosave
-- **File Sharing**: Upload and download files in rooms
+- **File Sharing**: Securely share PDF and DOCX documents (up to 8MB) with granular access permissions ("View Only" vs. "Downloadable"), secure server-side checks, and an interactive file preview modal.
 - **Pomodoro Timer**: Shared study timer with session tracking and user stats
 - **Notifications**: Real-time notifications for room activity and tasks
 - **User Profiles**: Customizable profiles with productivity stats
@@ -308,8 +308,11 @@ node database/initDb.js
 ### Files
 
 - `GET /api/files/:roomId` - Get room files
-- `POST /api/files/:roomId` - Upload a file
-- `DELETE /api/files/:fileId` - Delete a file
+- `POST /api/files/:roomId` - Upload a file (restricted to PDF and DOCX, max 8MB, accepts optional `sharing_permission` parameter)
+- `GET /api/files/download/:fileId` - Securely download file (restricted to downloadable files, uploader, or room owner/admins)
+- `GET /api/files/view/:fileId` - Inline preview/view file (validates room access)
+- `PUT /api/files/:fileId/permission` - Update file sharing permission (`view` or `download`)
+- `DELETE /api/files/:fileId` - Delete a file (restricted to uploader or room owner/admins)
 
 ### Notifications
 

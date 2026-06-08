@@ -63,6 +63,11 @@ async function initializeDatabase() {
     } catch (e) {
       // Column may already exist
     }
+    try {
+      await connection.query("ALTER TABLE files ADD COLUMN sharing_permission ENUM('view', 'download') DEFAULT 'view'");
+    } catch (e) {
+      // Column may already exist
+    }
 
     console.log('Database and tables created successfully!');
     
