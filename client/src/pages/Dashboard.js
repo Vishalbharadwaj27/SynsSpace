@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUserRooms } from '../redux/slices/roomSlice';
 import { getUserStats } from '../redux/slices/pomodoroSlice';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const Dashboard = () => {
   const dispatch = useDispatch();

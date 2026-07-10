@@ -11,6 +11,7 @@ import { startSession, endSession, getSessions } from '../redux/slices/pomodoroS
 import { getFiles, uploadFile, updateFilePermission, deleteFile } from '../redux/slices/fileSlice';
 import socket from '../utils/socket';
 import api from '../utils/api';
+import WorkspaceAdminPanel from './WorkspaceAdminPanel';
 import dayjs from 'dayjs';
 import { useCreateBlockNote, BlockNoteViewRaw } from '@blocknote/react';
 import '@blocknote/react/style.css';
@@ -77,6 +78,7 @@ const RoomDetail = () => {
   const timerRef = useRef(null);
 
   const isOwner = currentMembers?.some(m => m.user_id === user?.id && m.role === 'owner');
+  const isWorkspaceAdmin = currentMembers?.some(m => m.user_id === user?.id && (m.role === 'owner' || m.role === 'admin'));
 
   const [noteKey, setNoteKey] = useState(0);
   const noteEditorRef = useRef(null);
@@ -485,6 +487,21 @@ const RoomDetail = () => {
             </List.Item>
           )} />
         </TabPane>
+
+        {isWorkspaceAdmin && (
+          <TabPane tab="Admin Panel" key="admin">
+            <WorkspaceAdminPanel 
+              roomId={roomId} 
+              currentUserId={user?.id}
+              onRefreshMembers={() => dispatch(getRoomById(roomId))}
+              onRefreshMessages={() => dispatch(getMessages(roomId))}
+              onRefreshFiles={() => dispatch(getFiles(roomId))}
+              messages={messages}
+              files={files}
+            />
+          </TabPane>
+        )}
+
 
         <TabPane tab="Files" key="files">
           <Card 

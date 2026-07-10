@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import Rooms from './pages/Rooms';
 import RoomDetail from './pages/RoomDetail';
 import Profile from './pages/Profile';
+import GlobalAdminDashboard from './pages/GlobalAdminDashboard';
 
 function App() {
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -32,6 +33,7 @@ function App() {
           <Route path="/rooms" element={<Rooms />} />
           <Route path="/rooms/:roomId" element={<RoomDetail />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<GlobalAdminDashboard />} />
         </Route>
       </Route>
 

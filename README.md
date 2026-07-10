@@ -130,6 +130,12 @@ Through this project I strengthened my understanding of:
 - Redis caching
 - CI/CD pipeline
 - Unit and integration testing
+- **Role-Based Workspace Administration Extensions**:
+  - Detailed activity & audit logs
+  - Member invitation & pending requests management
+  - Custom workspace settings & metadata customizations
+  - Advanced content moderation queue & storage monitoring
+
 
 ---
 
@@ -162,9 +168,11 @@ Through this project I strengthened my understanding of:
 <summary><b>View Feature List (Grouped)</b></summary>
 
 ### Workspace & Communication
-- **Study Rooms**: Create public/private rooms, browse/search rooms, join via code/card, manage members.
+- **Study Rooms / Workspaces**: Create public/private rooms, browse/search rooms, join via code/card, manage members.
 - **Realtime Chat**: Socket.IO powered messaging with typing indicators and auto-reconnection.
 - **Notifications**: Real-time notifications for room activity and tasks.
+- **Role-Based Workspace Administration**: Secure, workspace-isolated admin panel with an explicit permission hierarchy (Owner vs. Admin) to manage roles, remove members, and moderate files/messages.
+
 
 ### Productivity Tools
 - **Task Management**: Kanban-style task board with status tracking.
@@ -219,6 +227,24 @@ SyncSpace/
 - `POST /api/rooms/:roomId/join` - Join a room by ID (requires `room_code` body for private rooms)
 - `GET /api/rooms/:roomId` - Get room details
 - `DELETE /api/rooms/:roomId` - Leave a room (transfers ownership if needed)
+
+### Workspace Administration
+- `GET /api/rooms/:roomId/admin/stats` - Get workspace metrics (members, tasks, notes, files, messages)
+- `GET /api/rooms/:roomId/admin/members` - Get workspace members and their roles
+- `PUT /api/rooms/:roomId/admin/members/:userId/role` - Update member's role (enforcing hierarchical permission check)
+- `DELETE /api/rooms/:roomId/admin/members/:userId` - Remove a member from the workspace
+- `DELETE /api/rooms/:roomId/admin/messages/:messageId` - Moderate/delete inappropriate message
+- `DELETE /api/rooms/:roomId/admin/files/:fileId` - Moderate/delete file
+
+### Global Platform Administration
+- `GET /api/admin/workspaces` - Retrieve platform-wide directory of all workspaces
+- `GET /api/admin/workspaces/:roomId` - Inspect statistics, members, and content for a workspace
+- `PUT /api/admin/workspaces/:roomId/members/:userId/role` - Update any member's role in a workspace
+- `DELETE /api/admin/workspaces/:roomId/members/:userId` - Kick any user from a workspace
+- `DELETE /api/admin/messages/:messageId` - Delete any message across the platform
+- `DELETE /api/admin/files/:fileId` - Delete any file across the platform
+
+
 
 ### Messages
 - `GET /api/messages/:roomId` - Get room messages (paginated)
@@ -325,7 +351,8 @@ SyncSpace/
    cd client && npm install && npm start
    ```
 
-### Default Admin User
+
+#### Global Platform Admin
 - **Email**: `admin@syncspace.com`
 - **Password**: `admin123`
 

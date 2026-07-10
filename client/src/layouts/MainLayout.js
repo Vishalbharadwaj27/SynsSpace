@@ -8,6 +8,7 @@ import {
   LogoutOutlined,
   BellOutlined,
   MenuOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../redux/slices/authSlice';
@@ -40,6 +41,15 @@ const MainLayout = () => {
       label: 'Profile',
     },
   ];
+
+  if (user?.role === 'admin') {
+    menuItems.push({
+      key: '/admin',
+      icon: <SafetyCertificateOutlined />,
+      label: 'Admin Portal',
+    });
+  }
+
 
   const handleMenuClick = ({ key }) => {
     navigate(key);

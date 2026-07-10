@@ -11,6 +11,8 @@ const errorHandler = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
+const adminRoutes = require('./routes/admin');
+const globalAdminRoutes = require('./routes/globalAdmin');
 const messageRoutes = require('./routes/messages');
 const taskRoutes = require('./routes/tasks');
 const noteRoutes = require('./routes/notes');
@@ -46,12 +48,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/rooms/:roomId/admin', adminRoutes);
+app.use('/api/admin', globalAdminRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/pomodoro', pomodoroRoutes);
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SyncSpace API is running' });
