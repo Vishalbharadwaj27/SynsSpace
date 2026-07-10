@@ -25,7 +25,15 @@ const statusColors = { todo: '#999', in_progress: '#1890ff', review: '#faad14', 
 const priorityColors = { low: 'green', medium: 'blue', high: 'orange', urgent: 'red' };
 
 const NoteBlockEditor = React.forwardRef(({ content, onTitleChange, title }, ref) => {
-  const initialContent = (() => { try { return JSON.parse(content || '[]'); } catch { return undefined; } })();
+  const initialContent = (() => {
+    try {
+      if (!content || content === '[]') return undefined;
+      const parsed = JSON.parse(content);
+      return parsed && parsed.length > 0 ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
   const editor = useCreateBlockNote({ initialContent });
   React.useImperativeHandle(ref, () => ({ getContent: () => JSON.stringify(editor.document || []) }), [editor]);
   return (

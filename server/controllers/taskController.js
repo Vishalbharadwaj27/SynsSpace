@@ -12,9 +12,14 @@ const createTask = async (req, res) => {
       });
     }
 
+    let formattedDueDate = null;
+    if (due_date) {
+      formattedDueDate = new Date(due_date).toISOString().slice(0, 19).replace('T', ' ');
+    }
+
     const [result] = await pool.query(
       'INSERT INTO tasks (room_id, title, description, assigned_to, priority, due_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [roomId, title, description || null, assigned_to || null, priority || 'medium', due_date || null, req.userId]
+      [roomId, title, description || null, assigned_to || null, priority || 'medium', formattedDueDate, req.userId]
     );
 
     const [tasks] = await pool.query(
@@ -83,9 +88,14 @@ const updateTask = async (req, res) => {
     const { taskId } = req.params;
     const { title, description, assigned_to, status, priority, due_date } = req.body;
 
+    let formattedDueDate = null;
+    if (due_date) {
+      formattedDueDate = new Date(due_date).toISOString().slice(0, 19).replace('T', ' ');
+    }
+
     await pool.query(
       'UPDATE tasks SET title = ?, description = ?, assigned_to = ?, status = ?, priority = ?, due_date = ? WHERE id = ?',
-      [title, description, assigned_to, status, priority, due_date, taskId]
+      [title, description, assigned_to, status, priority, formattedDueDate, taskId]
     );
 
     const [tasks] = await pool.query(
