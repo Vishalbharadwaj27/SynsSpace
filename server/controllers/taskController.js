@@ -3,14 +3,7 @@ const pool = require('../config/database');
 const createTask = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { title, description, assigned_to, priority, due_date } = req.body;
-
-    if (!title) {
-      return res.status(400).json({
-        success: false,
-        message: 'Task title is required'
-      });
-    }
+    const { title, description, assigned_to, priority, due_date, status } = req.body;
 
     let formattedDueDate = null;
     if (due_date) {
@@ -18,8 +11,8 @@ const createTask = async (req, res) => {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO tasks (room_id, title, description, assigned_to, priority, due_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [roomId, title, description || null, assigned_to || null, priority || 'medium', formattedDueDate, req.userId]
+      'INSERT INTO tasks (room_id, title, description, assigned_to, priority, due_date, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [roomId, title, description || null, assigned_to || null, priority || 'medium', formattedDueDate, status || 'pending', req.userId]
     );
 
     const [tasks] = await pool.query(
@@ -88,6 +81,15 @@ const updateTask = async (req, res) => {
     const { taskId } = req.params;
     const { title, description, assigned_to, status, priority, due_date } = req.body;
 
+    const [tasks] = await pool.query('SELECT room_id FROM tasks WHERE id = ?', [taskId]);
+    if (tasks.length === 0) return res.status(404).json({ success: false, message: 'Task not found' });
+    
+    const [member] = await pool.query(
+      'SELECT role FROM room_members WHERE room_id = ? AND user_id = ?',
+      [tasks[0].room_id, req.userId]
+    );
+    if (member.length === 0) return res.status(403).json({ success: false, message: 'Access denied' });
+
     let formattedDueDate = null;
     if (due_date) {
       formattedDueDate = new Date(due_date).toISOString().slice(0, 19).replace('T', ' ');
@@ -98,7 +100,7 @@ const updateTask = async (req, res) => {
       [title, description, assigned_to, status, priority, formattedDueDate, taskId]
     );
 
-    const [tasks] = await pool.query(
+    const [updatedTasks] = await pool.query(
       `SELECT t.*, u.full_name as assigned_name, u.profile_photo as assigned_photo,
        c.full_name as creator_name
        FROM tasks t
@@ -111,7 +113,7 @@ const updateTask = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Task updated successfully',
-      data: { task: tasks[0] }
+      data: { task: updatedTasks[0] }
     });
   } catch (error) {
     console.error('Update task error:', error);
@@ -125,6 +127,20 @@ const updateTask = async (req, res) => {
 const deleteTask = async (req, res) => {
   try {
     const { taskId } = req.params;
+
+    const [tasks] = await pool.query('SELECT room_id, created_by FROM tasks WHERE id = ?', [taskId]);
+    if (tasks.length === 0) return res.status(404).json({ success: false, message: 'Task not found' });
+    
+    const [member] = await pool.query(
+      'SELECT role FROM room_members WHERE room_id = ? AND user_id = ?',
+      [tasks[0].room_id, req.userId]
+    );
+    if (member.length === 0) return res.status(403).json({ success: false, message: 'Access denied' });
+
+    const isOwner = member[0].role === 'owner' || member[0].role === 'admin';
+    if (!isOwner && tasks[0].created_by !== req.userId) {
+        return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
 
     await pool.query('DELETE FROM tasks WHERE id = ?', [taskId]);
 

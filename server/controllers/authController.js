@@ -1,12 +1,8 @@
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 const { generateToken } = require('../config/jwt');
-const { validateRegistration, validateLogin } = require('../middleware/validator');
 
 const register = async (req, res) => {
-  const { error } = validateRegistration(req.body);
-  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
-
   try {
     const { email, password, full_name, bio, study_interests } = req.body;
 
@@ -55,9 +51,6 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { error } = validateLogin(req.body);
-  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
-
   try {
     const { email, password } = req.body;
 
