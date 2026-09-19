@@ -89,13 +89,12 @@ As the application grows, Redis could be introduced for caching and Socket.IO sc
 - Real-time updates eliminate repeated polling requests.
 - Modular backend improves maintainability and reduces coupling.
 
-## Security
-- JWT-based authentication.
-- Password hashing before database storage.
-- Protected API routes.
-- Input validation on client and server.
-- Environment variables used for sensitive credentials.
-- SQL injection prevention through parameterized queries.
+## Security Note
+The platform has been hardened with:
+- **Rate Limiting**: `/api/auth` endpoints are protected against brute-force.
+- **Strict Validation**: All user inputs are validated using `Joi` schemas.
+- **Secure Configuration**: Mandatory `JWT_SECRET` environment variable prevents token forgery.
+- **Insecure Feature Mitigation**: The `directResetPassword` endpoint has been disabled; implement secure, email-based recovery for production.
 
 ## Scalability
 The project has been structured so additional collaboration modules such as calendar scheduling, video meetings, AI assistance, or notifications can be integrated without significant architectural changes.
