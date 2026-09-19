@@ -46,7 +46,15 @@ app.use(logger);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api/auth', authRoutes);
+const rateLimit = require('express-rate-limit');
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many attempts, please try again later.' }
+});
+
+app.use('/api/auth', authLimiter);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/rooms/:roomId/admin', adminRoutes);
 app.use('/api/admin', globalAdminRoutes);

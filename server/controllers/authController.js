@@ -1,18 +1,14 @@
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const pool = require('../config/database');
 const { generateToken } = require('../config/jwt');
+const { validateRegistration, validateLogin } = require('../middleware/validator');
 
 const register = async (req, res) => {
+  const { error } = validateRegistration(req.body);
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
   try {
     const { email, password, full_name, bio, study_interests } = req.body;
-
-    if (!email || !password || !full_name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, password, and full name are required'
-      });
-    }
 
     const [existingUsers] = await pool.query(
       'SELECT id FROM users WHERE email = ?',
@@ -59,15 +55,11 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  const { error } = validateLogin(req.body);
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
 
     const [users] = await pool.query(
       'SELECT * FROM users WHERE email = ?',
@@ -201,56 +193,10 @@ const forgotPassword = async (req, res) => {
 };
 
 const directResetPassword = async (req, res) => {
-  try {
-    const { email, new_password, confirm_password } = req.body;
-
-    if (!email || !new_password || !confirm_password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, new password, and confirm password are required'
-      });
-    }
-
-    if (new_password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters'
-      });
-    }
-
-    if (new_password !== confirm_password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Passwords do not match'
-      });
-    }
-
-    const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Email not found'
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(new_password, 10);
-
-    await pool.query(
-      'UPDATE users SET password = ? WHERE id = ?',
-      [hashedPassword, users[0].id]
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successful. You can now login with your new password.'
-    });
-  } catch (error) {
-    console.error('Direct reset password error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error resetting password'
-    });
-  }
+  return res.status(403).json({
+    success: false,
+    message: 'Feature disabled for security reasons. Please use proper email-based reset flow.'
+  });
 };
 
 module.exports = {
